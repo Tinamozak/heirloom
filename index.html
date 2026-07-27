@@ -94,6 +94,9 @@
     padding:18px; color:var(--muted); position:relative; overflow:hidden;
   }
   .photo-drop img{max-width:100%; border-radius:12px; display:block; margin:0 auto;}
+  .cropwrap{position:relative; display:inline-block; max-width:100%; line-height:0; touch-action:none; -webkit-user-select:none; user-select:none;}
+  .cropwrap img{max-width:100%; display:block; border-radius:12px;}
+  .cropbox{position:absolute; border:2px solid #fff; box-shadow:0 0 0 9999px rgba(0,0,0,.42); border-radius:4px; display:none; pointer-events:none;}
   .photo-actions{display:flex; gap:10px; margin-top:10px;}
   .btn{
     border:none; border-radius:12px; padding:13px 16px; font-size:15px; font-weight:600; cursor:pointer;
@@ -152,7 +155,7 @@
 </div>
 
 <header class="app">
-  <h1>Heir<span>loom</span> <small style="font-size:12px;color:var(--muted);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;">v7</small></h1>
+  <h1>Heir<span>loom</span> <small style="font-size:12px;color:var(--muted);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;">v8</small></h1>
   <div style="display:flex;gap:8px;">
     <button class="iconbtn" onclick="exportCSV()" title="Export">⬇</button>
     <button class="iconbtn" onclick="openSettings()" title="Settings">⚙</button>
@@ -160,8 +163,6 @@
 </header>
 
 <main class="wrap" id="dash"></main>
-
-<button class="fab" id="addBtn">＋ Add Item</button>
 
 <!-- Item form sheet -->
 <div class="sheet-bg" id="formBg" onclick="if(event.target===this)closeForm()"></div>
@@ -172,17 +173,21 @@
   </div>
   <div class="sheet-body">
     <div class="photo-drop" id="photoDrop">
-      <div id="photoPlaceholder">📷<div style="margin-top:6px;font-size:14px;">Tap below to photograph the item</div></div>
-      <img id="photoPreview" style="display:none;">
+      <div id="photoPlaceholder">📷<div style="margin-top:6px;font-size:14px;">Tap Camera below to photograph the item</div></div>
+      <div class="cropwrap" id="cropWrap" style="display:none;">
+        <img id="photoPreview">
+        <div class="cropbox" id="cropBox"></div>
+      </div>
     </div>
+    <p class="hint" id="cropHint" style="display:none;">✋ Drag a box around one item to isolate it (optional), then tap <b>Identify &amp; value</b>. <button type="button" onclick="resetCrop()" style="background:none;border:none;color:var(--green);font-weight:600;padding:0;">↺ clear box</button></p>
     <div class="photo-actions">
       <button class="btn gold" onclick="document.getElementById('cameraInput').click()">📷 Camera</button>
       <button class="btn ghost" onclick="document.getElementById('galleryInput').click()">🖼 Photos</button>
-      <button class="btn ghost" id="aiBtn" onclick="aiEstimate()">✨ AI Guess</button>
     </div>
+    <button class="btn primary" id="aiBtn" style="width:100%;margin-top:10px;" onclick="aiEstimate()">✨ Identify &amp; value this item</button>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
     <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handlePhoto(this)">
-    <p class="hint" id="aiHint">✨ AI Guess fills in the name, category & a ballpark value from the photo. Add your Claude API key in Settings (⚙) to switch it on — optional.</p>
+    <p class="hint" id="aiHint">Uses AI to name the item and estimate a resale value from your photo. Needs a free Claude API key (one-time, in Settings ⚙). No key yet? Just type the name and tap the eBay link below for the real sold price.</p>
 
     <label class="fld">Item name</label>
     <input id="fName" placeholder="e.g. Grandma's walnut dresser">
@@ -229,7 +234,7 @@
   <div class="sheet-body">
     <label class="fld">Claude API key <span class="ai-badge">optional</span></label>
     <input id="apiKey" type="password" placeholder="sk-ant-...">
-    <div class="settings-note">Turns on the ✨ AI Guess button — it looks at your photo and suggests a name, category and ballpark value. Your key is stored only on this device, in this browser, and is sent only to Anthropic. Leave it blank and everything else still works.</div>
+    <div class="settings-note">Turns on <b>Identify &amp; value</b> — it looks at your photo and fills in the name, category and a ballpark value. Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--green);font-weight:600;">console.anthropic.com</a> (create account → API keys → Create key → paste here). Your key is stored only on this device and sent only to Anthropic. Leave it blank and everything else still works.</div>
     <label class="fld">AI model</label>
     <input id="apiModel" placeholder="claude-3-5-sonnet-latest">
 
@@ -328,7 +333,7 @@ function fillCats(){ const s=document.getElementById("fCat"); s.innerHTML=CATS.m
 function openForm(id){
   var _d=document.getElementById("diag"); if(_d){ _d.textContent="Heirloom v7 · opening form…"; _d.style.color="#3a5a40"; }
   editingId = id || null;
-  currentPhoto=null; currentVoice=null;
+  currentPhoto=null; currentVoice=null; resetCrop();
   fillCats();
   const it = id ? items.find(x=>x.id===id) : null;
   document.getElementById("formTitle").textContent = it ? "Edit item" : "Add item";
@@ -350,9 +355,44 @@ function closeForm(){
   showView("dash");
 }
 function showPhoto(){
-  const img=document.getElementById("photoPreview"), ph=document.getElementById("photoPlaceholder");
-  if(currentPhoto){ img.src=currentPhoto; img.style.display="block"; ph.style.display="none"; }
-  else { img.style.display="none"; ph.style.display="block"; }
+  const img=document.getElementById("photoPreview"), ph=document.getElementById("photoPlaceholder"),
+        wrap=document.getElementById("cropWrap"), hint=document.getElementById("cropHint");
+  if(currentPhoto){ img.src=currentPhoto; wrap.style.display="inline-block"; ph.style.display="none"; if(hint)hint.style.display="block"; }
+  else { wrap.style.display="none"; ph.style.display="block"; if(hint)hint.style.display="none"; }
+}
+
+/* ---------- Crop: drag a box around one item ---------- */
+let cropStart=null, cropRect=null;
+function resetCrop(){ cropRect=null; const b=document.getElementById("cropBox"); if(b)b.style.display="none"; }
+function initCrop(){
+  const wrap=document.getElementById("cropWrap"), box=document.getElementById("cropBox");
+  if(!wrap) return;
+  function pos(e){ const img=document.getElementById("photoPreview"); const r=img.getBoundingClientRect();
+    return { x:Math.max(0,Math.min(e.clientX-r.left,r.width)), y:Math.max(0,Math.min(e.clientY-r.top,r.height)), w:r.width, h:r.height }; }
+  function draw(p){
+    const left=Math.min(cropStart.x,p.x), top=Math.min(cropStart.y,p.y);
+    const w=Math.abs(p.x-cropStart.x), h=Math.abs(p.y-cropStart.y);
+    box.style.left=left+"px"; box.style.top=top+"px"; box.style.width=w+"px"; box.style.height=h+"px";
+    cropRect={left,top,w,h,dispW:p.w,dispH:p.h};
+  }
+  wrap.addEventListener("pointerdown",e=>{ if(!currentPhoto)return; cropStart=pos(e); box.style.display="block"; draw(cropStart); try{wrap.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
+  wrap.addEventListener("pointermove",e=>{ if(cropStart){ draw(pos(e)); e.preventDefault(); } });
+  wrap.addEventListener("pointerup",e=>{ if(cropStart){ if(cropRect&&(cropRect.w<12||cropRect.h<12)){ resetCrop(); } cropStart=null; } });
+}
+function applyCrop(){
+  return new Promise(res=>{
+    if(!cropRect||!currentPhoto){ res(false); return; }
+    const im=new Image();
+    im.onload=()=>{
+      const sx=cropRect.left/cropRect.dispW*im.naturalWidth,  sy=cropRect.top/cropRect.dispH*im.naturalHeight;
+      const sw=cropRect.w/cropRect.dispW*im.naturalWidth,     sh=cropRect.h/cropRect.dispH*im.naturalHeight;
+      const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(sw)); c.height=Math.max(1,Math.round(sh));
+      c.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,c.width,c.height);
+      currentPhoto=c.toDataURL("image/jpeg",0.82);
+      resetCrop(); showPhoto(); res(true);
+    };
+    im.onerror=()=>res(false); im.src=currentPhoto;
+  });
 }
 function updateComps(){
   const n=document.getElementById("fName").value.trim();
@@ -361,7 +401,8 @@ function updateComps(){
 }
 function handlePhoto(input){
   const f=input.files&&input.files[0]; if(!f) return;
-  resizeImage(f,1100,0.72).then(d=>{ currentPhoto=d; showPhoto(); }).catch(()=>toast("Couldn't read that photo"));
+  resetCrop();
+  resizeImage(f,1400,0.78).then(d=>{ currentPhoto=d; showPhoto(); }).catch(()=>toast("Couldn't read that photo"));
   input.value="";
 }
 function resizeImage(file,maxDim,q){
@@ -407,11 +448,12 @@ function showVoice(){
 
 /* ---------- AI estimate (optional) ---------- */
 async function aiEstimate(){
-  const key=localStorage.getItem("heirloom_key");
-  if(!key){ openSettings(); toast("Add your Claude API key to use AI Guess"); return; }
   if(!currentPhoto){ toast("Take a photo of the item first"); return; }
+  const key=localStorage.getItem("heirloom_key");
+  if(!key){ openSettings(); toast("Add a free Claude API key (Settings) to auto-value items"); return; }
   const model=localStorage.getItem("heirloom_model")||"claude-3-5-sonnet-latest";
-  const btn=document.getElementById("aiBtn"); const old=btn.innerHTML; btn.innerHTML="✨ …"; btn.disabled=true;
+  const btn=document.getElementById("aiBtn"); const old=btn.innerHTML; btn.innerHTML="✨ Analyzing…"; btn.disabled=true;
+  await applyCrop();
   try{
     const m=currentPhoto.match(/^data:(.*?);base64,(.*)$/);
     const media=m?m[1]:"image/jpeg", b64=m?m[2]:currentPhoto;
@@ -431,8 +473,8 @@ async function aiEstimate(){
     if(j.category && CATS.includes(j.category)) document.getElementById("fCat").value=j.category;
     if(j.value!=null && document.getElementById("fValue").value==="") document.getElementById("fValue").value=Math.round(j.value);
     updateComps();
-    toast("AI filled a first guess — check the eBay comps for the real number");
-  }catch(e){ toast("AI Guess failed: "+e.message); }
+    toast("Estimated "+(j.value!=null?("$"+Math.round(j.value)):"value")+" — tap the eBay link to confirm, then Save");
+  }catch(e){ toast("Couldn't value it: "+e.message); }
   finally{ btn.innerHTML=old; btn.disabled=false; }
 }
 
@@ -551,6 +593,7 @@ if(localStorage.getItem("heirloom_pin")){ drawDots(); document.getElementById("l
 refreshPinUI();
 render();
 showView("dash");
+initCrop();
 
 /* ---------- Diagnostics: prove the code ran + wire the button defensively ---------- */
 (function(){
