@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Heirloom">
+<meta name="theme-color" content="#3a5a40">
+<title>Heirloom</title>
+<style>
+  :root{
+    --bg:#f7f3ec; --card:#fffdf9; --ink:#2b2a26; --muted:#8a8578;
+    --green:#3a5a40; --green-soft:#e6ede6; --gold:#b08442; --line:#e7e0d4;
+    --danger:#a1443a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--ink);
+    padding-bottom:120px; overscroll-behavior-y:contain;
+  }
+  h1,h2,h3{font-family:"Georgia","Times New Roman",serif; font-weight:600; margin:0;}
+  .wrap{max-width:640px; margin:0 auto; padding:0 16px;}
+  header.app{
+    padding:20px 16px 12px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; background:linear-gradient(var(--bg),var(--bg) 70%, rgba(247,243,236,0)); z-index:5;
+  }
+  header.app h1{font-size:26px; letter-spacing:.3px; color:var(--green);}
+  header.app h1 span{color:var(--gold);}
+  .iconbtn{background:var(--card); border:1px solid var(--line); border-radius:12px; width:44px; height:44px; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  /* Dashboard */
+  .hero{
+    background:var(--green); color:#fdfcf8; border-radius:20px; padding:22px 22px 20px; margin:6px 0 16px;
+    box-shadow:0 8px 24px rgba(58,90,64,.18);
+  }
+  .hero .label{font-size:13px; opacity:.8; letter-spacing:.4px; text-transform:uppercase;}
+  .hero .total{font-family:"Georgia",serif; font-size:44px; font-weight:600; margin:2px 0 4px; line-height:1;}
+  .hero .sub{font-size:14px; opacity:.85;}
+  .hero .sub b{color:#e9c88a;}
+  .stats{display:flex; gap:10px; margin-bottom:18px;}
+  .stat{flex:1; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
+  .stat .n{font-size:22px; font-weight:700; font-family:"Georgia",serif;}
+  .stat .l{font-size:12px; color:var(--muted);}
+  .section-title{font-size:15px; color:var(--muted); margin:20px 4px 10px; text-transform:uppercase; letter-spacing:.5px;}
+  .catbar{display:flex; align-items:center; gap:10px; margin:8px 4px;}
+  .catbar .name{width:96px; font-size:13px; color:var(--ink); flex-shrink:0;}
+  .catbar .track{flex:1; height:8px; background:var(--green-soft); border-radius:6px; overflow:hidden;}
+  .catbar .fill{height:100%; background:var(--gold); border-radius:6px;}
+  .catbar .val{width:70px; text-align:right; font-size:12px; color:var(--muted);}
+  /* Item cards */
+  .item{
+    display:flex; gap:12px; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:12px; margin-bottom:10px; cursor:pointer; align-items:center;
+  }
+  .item .thumb{width:60px; height:60px; border-radius:12px; object-fit:cover; background:var(--green-soft); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--green);}
+  .item .body{flex:1; min-width:0;}
+  .item .body .nm{font-weight:600; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .item .body .meta{font-size:12px; color:var(--muted); margin-top:2px;}
+  .item .body .mem{font-size:12px; color:var(--gold); margin-top:3px;}
+  .item .price{font-weight:700; font-family:"Georgia",serif; font-size:17px; text-align:right; white-space:nowrap;}
+  .addtop{width:100%; background:var(--green); color:#fff; border:none; border-radius:16px; padding:17px; font-size:17px; font-weight:600; margin:0 0 14px; cursor:pointer; -webkit-appearance:none; touch-action:manipulation; box-shadow:0 6px 18px rgba(58,90,64,.22);}
+  .addtop:active{background:#2f4a34;}
+  .empty{text-align:center; color:var(--muted); padding:40px 20px; font-size:15px; line-height:1.5;}
+  .empty .big{font-size:40px; margin-bottom:8px;}
+  /* Floating add */
+  .fab{
+    position:fixed; left:0; right:0; margin:0 auto; width:max-content; bottom:26px; z-index:20;
+    background:var(--green); color:#fff; border:none; border-radius:30px; padding:16px 30px;
+    font-size:17px; font-weight:600; box-shadow:0 8px 22px rgba(58,90,64,.32); cursor:pointer;
+    display:flex; align-items:center; gap:8px; -webkit-appearance:none; touch-action:manipulation;
+  }
+  .fab:active{background:#2f4a34;}
+  /* Sheet / modal */
+  .sheet-bg{display:none !important;}
+  .sheet{
+    max-width:640px; margin:0 auto; background:var(--bg);
+    padding-bottom:60px; display:none; min-height:100vh;
+  }
+  .sheet-head{position:sticky; top:0; background:var(--bg); padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line);}
+  .sheet-head h2{font-size:20px;}
+  .sheet-body{padding:16px 18px;}
+  label.fld{display:block; font-size:13px; color:var(--muted); margin:16px 2px 6px; font-weight:600;}
+  input,select,textarea{
+    width:100%; padding:13px 14px; border:1px solid var(--line); border-radius:12px; font-size:16px;
+    background:var(--card); color:var(--ink); font-family:inherit;
+  }
+  textarea{min-height:80px; resize:vertical;}
+  .row2{display:flex; gap:10px;}
+  .row2>div{flex:1;}
+  .photo-drop{
+    border:2px dashed var(--line); border-radius:16px; background:var(--card); text-align:center;
+    padding:18px; color:var(--muted); position:relative; overflow:hidden;
+  }
+  .photo-drop img{max-width:100%; border-radius:12px; display:block; margin:0 auto;}
+  .photo-actions{display:flex; gap:10px; margin-top:10px;}
+  .btn{
+    border:none; border-radius:12px; padding:13px 16px; font-size:15px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:7px; flex:1;
+  }
+  .btn.primary{background:var(--green); color:#fff;}
+  .btn.gold{background:var(--gold); color:#fff;}
+  .btn.ghost{background:var(--card); color:var(--ink); border:1px solid var(--line);}
+  .btn.danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
+  .hint{font-size:12px; color:var(--muted); margin:6px 2px 0; line-height:1.4;}
+  .comps{display:inline-flex; align-items:center; gap:6px; color:var(--green); font-weight:600; font-size:14px; text-decoration:none; margin-top:8px;}
+  .save-bar{position:sticky; bottom:0; background:var(--bg); padding:14px 18px; border-top:1px solid var(--line); display:flex; gap:10px;}
+  .pill{display:inline-block; background:var(--green-soft); color:var(--green); border-radius:20px; padding:4px 11px; font-size:12px; font-weight:600; margin:2px 4px 2px 0;}
+  .voice-row{display:flex; align-items:center; gap:12px; margin-top:8px;}
+  .rec-dot{width:12px; height:12px; border-radius:50%; background:var(--danger); animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  audio{width:100%; margin-top:8px;}
+  /* Toast */
+  .toast{position:fixed; left:50%; bottom:100px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 18px; border-radius:12px; font-size:14px; z-index:50; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90%; text-align:center;}
+  .toast.show{opacity:.96;}
+  .ai-badge{font-size:11px; background:var(--gold); color:#fff; padding:2px 7px; border-radius:10px; margin-left:6px;}
+  /* Lock screen */
+  .lock{position:fixed; inset:0; z-index:100; background:var(--green); color:#fdfcf8; display:none; flex-direction:column; align-items:center; justify-content:center; padding:24px;}
+  .lock.show{display:flex;}
+  .lock h1{font-size:34px; color:#fdfcf8; margin-bottom:6px;}
+  .lock h1 span{color:#e9c88a;}
+  .lock p{opacity:.85; font-size:14px; margin:0 0 22px;}
+  .lock .dots{display:flex; gap:14px; margin-bottom:26px;}
+  .lock .dot{width:16px; height:16px; border-radius:50%; border:2px solid #e9c88a;}
+  .lock .dot.on{background:#e9c88a;}
+  .keys{display:grid; grid-template-columns:repeat(3,74px); gap:14px;}
+  .keys button{width:74px; height:74px; border-radius:50%; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:#fff; font-size:26px; font-family:"Georgia",serif; cursor:pointer;}
+  .keys button:active{background:rgba(255,255,255,.22);}
+  .keys button.blank{background:none; border:none; cursor:default;}
+  .lock .err{color:#f3c6c0; height:18px; font-size:13px; margin-top:14px;}
+  .settings-note{font-size:13px; color:var(--muted); line-height:1.5; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:8px;}
+  .brand-foot{text-align:center; color:var(--muted); font-size:12px; padding:24px 0 8px;}
+</style>
+</head>
+<body>
+<div id="errbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#a1443a;color:#fff;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;padding:10px 14px;white-space:pre-wrap;"></div>
+<script>
+  window.addEventListener('error',function(e){
+    var b=document.getElementById('errbar'); if(!b)return;
+    b.style.display='block';
+    b.textContent='⚠ '+(e.message||'script error')+'  (line '+(e.lineno||'?')+')';
+  });
+</script>
+
+<div class="lock" id="lock">
+  <h1>Heir<span>loom</span></h1>
+  <p>Enter your passcode</p>
+  <div class="dots" id="lockDots"></div>
+  <div class="keys" id="lockKeys"></div>
+  <div class="err" id="lockErr"></div>
+</div>
+
+<header class="app">
+  <h1>Heir<span>loom</span> <small style="font-size:12px;color:var(--muted);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;">v7</small></h1>
+  <div style="display:flex;gap:8px;">
+    <button class="iconbtn" onclick="exportCSV()" title="Export">⬇</button>
+    <button class="iconbtn" onclick="openSettings()" title="Settings">⚙</button>
+  </div>
+</header>
+
+<main class="wrap" id="dash"></main>
+
+<button class="fab" id="addBtn">＋ Add Item</button>
+
+<!-- Item form sheet -->
+<div class="sheet-bg" id="formBg" onclick="if(event.target===this)closeForm()"></div>
+<div class="sheet" id="formSheet">
+  <div class="sheet-head">
+    <h2 id="formTitle">Add Item</h2>
+    <button class="iconbtn" onclick="closeForm()">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="photo-drop" id="photoDrop">
+      <div id="photoPlaceholder">📷<div style="margin-top:6px;font-size:14px;">Tap below to photograph the item</div></div>
+      <img id="photoPreview" style="display:none;">
+    </div>
+    <div class="photo-actions">
+      <button class="btn gold" onclick="document.getElementById('cameraInput').click()">📷 Camera</button>
+      <button class="btn ghost" onclick="document.getElementById('galleryInput').click()">🖼 Photos</button>
+      <button class="btn ghost" id="aiBtn" onclick="aiEstimate()">✨ AI Guess</button>
+    </div>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+    <p class="hint" id="aiHint">✨ AI Guess fills in the name, category & a ballpark value from the photo. Add your Claude API key in Settings (⚙) to switch it on — optional.</p>
+
+    <label class="fld">Item name</label>
+    <input id="fName" placeholder="e.g. Grandma's walnut dresser">
+
+    <div class="row2">
+      <div>
+        <label class="fld">Category</label>
+        <select id="fCat"></select>
+      </div>
+      <div>
+        <label class="fld">Room</label>
+        <input id="fRoom" placeholder="e.g. Living room">
+      </div>
+    </div>
+
+    <label class="fld">Estimated value (USD)</label>
+    <input id="fValue" type="number" inputmode="decimal" placeholder="0">
+    <a class="comps" id="compsLink" target="_blank" rel="noopener">🔎 See what these actually sold for on eBay →</a>
+    <p class="hint">The AI guess is just a starting point. This link shows <b>real closed prices</b> — that's the number to trust.</p>
+
+    <label class="fld">Status</label>
+    <select id="fStatus">
+      <option>Keeping</option><option>Selling</option><option>Sold</option><option>Gifted</option>
+    </select>
+
+    <label class="fld">The memory 💛</label>
+    <textarea id="fMemory" placeholder="What's the story? Who did it belong to? Why does it matter?"></textarea>
+    <div class="voice-row">
+      <button class="btn ghost" id="recBtn" style="flex:0 0 auto;padding:11px 16px;" onclick="toggleRecord()">🎙 Record a voice memory</button>
+      <span id="recStatus" style="font-size:13px;color:var(--muted);"></span>
+    </div>
+    <audio id="voicePlayer" controls style="display:none;"></audio>
+  </div>
+  <div class="save-bar">
+    <button class="btn danger" id="delBtn" style="flex:0 0 auto;display:none;" onclick="deleteCurrent()">Delete</button>
+    <button class="btn primary" onclick="saveItem()">Save item</button>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="sheet-bg" id="setBg" onclick="if(event.target===this)closeSettings()"></div>
+<div class="sheet" id="setSheet">
+  <div class="sheet-head"><h2>Settings</h2><button class="iconbtn" onclick="closeSettings()">✕</button></div>
+  <div class="sheet-body">
+    <label class="fld">Claude API key <span class="ai-badge">optional</span></label>
+    <input id="apiKey" type="password" placeholder="sk-ant-...">
+    <div class="settings-note">Turns on the ✨ AI Guess button — it looks at your photo and suggests a name, category and ballpark value. Your key is stored only on this device, in this browser, and is sent only to Anthropic. Leave it blank and everything else still works.</div>
+    <label class="fld">AI model</label>
+    <input id="apiModel" placeholder="claude-3-5-sonnet-latest">
+
+    <label class="fld">Security — passcode lock 🔒</label>
+    <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="Set a 4–8 digit passcode">
+    <div class="photo-actions">
+      <button class="btn ghost" id="lockNowBtn" onclick="lockNow()" style="display:none;">🔒 Lock now</button>
+      <button class="btn ghost" id="removePinBtn" onclick="removePin()" style="display:none;">Remove passcode</button>
+    </div>
+    <div class="settings-note"><b>Your home is private.</b> Everything you log — photos, values, voice memories — is stored only on this device and this browser. Nothing is uploaded to any server, there's no account, and there's no tracking. The one exception is the optional ✨ AI Guess, which sends just that one photo to Anthropic over an encrypted connection when you tap it. A passcode adds a lock over the app on this device; for a play-MVP that's the right level of protection — bank-grade encryption and heir accounts come in the real build.</div>
+    <label class="fld">Data</label>
+    <div class="photo-actions">
+      <button class="btn ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn danger" onclick="wipeAll()">Erase all items</button>
+    </div>
+    <div class="settings-note">Your inventory lives on this device only. Add this page to your Home Screen (Share → Add to Home Screen) to keep it one tap away. Export a CSV anytime to move it into a spreadsheet.</div>
+    <div class="save-bar"><button class="btn primary" onclick="saveSettings()">Done</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const CATS = ["Furniture","Jewelry","Art & Decor","Electronics","Kitchenware","Tools","Collectibles","Books/Media","Clothing","Sentimental","Other"];
+const CAT_ICON = {"Furniture":"🪑","Jewelry":"💍","Art & Decor":"🖼","Electronics":"📺","Kitchenware":"🍽","Tools":"🔧","Collectibles":"🏺","Books/Media":"📚","Clothing":"👗","Sentimental":"💛","Other":"📦"};
+const KEY="heirloom_items_v1";
+
+let items = load();
+let editingId = null;
+let currentPhoto = null;   // dataURL
+let currentVoice = null;   // dataURL
+let mediaRecorder=null, chunks=[];
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(items)); }catch(e){ toast("Storage full — try fewer photos/voice memos"); } }
+function money(n){ n=Number(n)||0; return "$"+n.toLocaleString("en-US",{maximumFractionDigits:0}); }
+function valueOf(it){ return Number(it.confirmedValue||it.estValue||0); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- Dashboard ---------- */
+function render(){
+  const total = items.reduce((s,it)=>s+valueOf(it),0);
+  const withMem = items.filter(it=>it.memory && it.memory.trim()).length;
+  let html = `
+   <div class="hero">
+     <div class="label">Estimated estate value</div>
+     <div class="total">${money(total)}</div>
+     <div class="sub">${items.length} item${items.length!==1?"s":""} logged · <b>${withMem}</b> with a memory kept</div>
+   </div>
+   <button class="addtop" onclick="openForm()">＋ Add an item</button>`;
+
+  // category breakdown
+  if(items.length){
+    const byCat={};
+    items.forEach(it=>{ byCat[it.category]=(byCat[it.category]||0)+valueOf(it); });
+    const max=Math.max(...Object.values(byCat),1);
+    const rows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([c,v])=>`
+      <div class="catbar"><div class="name">${CAT_ICON[c]||"📦"} ${c}</div>
+        <div class="track"><div class="fill" style="width:${Math.max(6,v/max*100)}%"></div></div>
+        <div class="val">${money(v)}</div></div>`).join("");
+    html += `<div class="section-title">Where the value sits</div>${rows}`;
+  }
+
+  html += `<div class="section-title">Items</div>`;
+  if(!items.length){
+    html += `<div class="empty"><div class="big">🏠</div>Nothing logged yet.<br>Tap <b>Add Item</b>, point your camera at something in the house, and watch the total grow.</div>`;
+  } else {
+    html += items.slice().reverse().map(it=>{
+      const thumb = it.photo ? `<img class="thumb" src="${it.photo}">` : `<div class="thumb">${CAT_ICON[it.category]||"📦"}</div>`;
+      const mem = (it.memory&&it.memory.trim()) ? `<div class="mem">💛 ${escapeHtml(it.memory.slice(0,48))}${it.memory.length>48?"…":""}</div>` : "";
+      return `<div class="item" onclick="openForm('${it.id}')">
+        ${thumb}
+        <div class="body"><div class="nm">${escapeHtml(it.name||"Untitled item")}</div>
+          <div class="meta">${CAT_ICON[it.category]||""} ${escapeHtml(it.category||"")}${it.room?" · "+escapeHtml(it.room):""} · ${escapeHtml(it.status||"Keeping")}</div>${mem}</div>
+        <div class="price">${money(valueOf(it))}</div>
+      </div>`;
+    }).join("");
+  }
+  html += `<div class="brand-foot">Heirloom v7 · your memories, valued.</div>`;
+  document.getElementById("dash").innerHTML = html;
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- View switching (page swap, no overlays) ---------- */
+function showView(v){
+  document.getElementById("dash").style.display   = (v==="dash")     ? "block":"none";
+  document.getElementById("formSheet").style.display = (v==="form")     ? "block":"none";
+  document.getElementById("setSheet").style.display  = (v==="settings") ? "block":"none";
+  const fab=document.querySelector(".fab"); if(fab) fab.style.display = (v==="dash") ? "flex":"none";
+  window.scrollTo(0,0);
+}
+
+/* ---------- Form ---------- */
+function fillCats(){ const s=document.getElementById("fCat"); s.innerHTML=CATS.map(c=>`<option>${c}</option>`).join(""); }
+function openForm(id){
+  var _d=document.getElementById("diag"); if(_d){ _d.textContent="Heirloom v7 · opening form…"; _d.style.color="#3a5a40"; }
+  editingId = id || null;
+  currentPhoto=null; currentVoice=null;
+  fillCats();
+  const it = id ? items.find(x=>x.id===id) : null;
+  document.getElementById("formTitle").textContent = it ? "Edit item" : "Add item";
+  document.getElementById("fName").value = it? (it.name||""):"";
+  document.getElementById("fCat").value = it? (it.category||"Other"):"Other";
+  document.getElementById("fRoom").value = it? (it.room||""):"";
+  document.getElementById("fValue").value = it? (it.confirmedValue||it.estValue||""):"";
+  document.getElementById("fStatus").value = it? (it.status||"Keeping"):"Keeping";
+  document.getElementById("fMemory").value = it? (it.memory||""):"";
+  document.getElementById("delBtn").style.display = it ? "flex" : "none";
+  currentPhoto = it? (it.photo||null):null;
+  currentVoice = it? (it.voice||null):null;
+  showPhoto(); showVoice(); updateComps();
+  document.getElementById("fName").oninput = updateComps;
+  showView("form");
+}
+function closeForm(){
+  if(mediaRecorder&&mediaRecorder.state==="recording"){ try{mediaRecorder.stop();}catch(e){} }
+  showView("dash");
+}
+function showPhoto(){
+  const img=document.getElementById("photoPreview"), ph=document.getElementById("photoPlaceholder");
+  if(currentPhoto){ img.src=currentPhoto; img.style.display="block"; ph.style.display="none"; }
+  else { img.style.display="none"; ph.style.display="block"; }
+}
+function updateComps(){
+  const n=document.getElementById("fName").value.trim();
+  const a=document.getElementById("compsLink");
+  a.href = "https://www.ebay.com/sch/i.html?_nkw="+encodeURIComponent(n||"")+"&LH_Sold=1&LH_Complete=1";
+}
+function handlePhoto(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  resizeImage(f,1100,0.72).then(d=>{ currentPhoto=d; showPhoto(); }).catch(()=>toast("Couldn't read that photo"));
+  input.value="";
+}
+function resizeImage(file,maxDim,q){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>{ const img=new Image();
+      img.onload=()=>{ let w=img.width,h=img.height;
+        if(w>h && w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; }
+        else if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; }
+        const c=document.createElement("canvas"); c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        res(c.toDataURL("image/jpeg",q));
+      }; img.onerror=rej; img.src=e.target.result; };
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+
+/* ---------- Voice ---------- */
+async function toggleRecord(){
+  const btn=document.getElementById("recBtn"), st=document.getElementById("recStatus");
+  if(mediaRecorder && mediaRecorder.state==="recording"){ mediaRecorder.stop(); return; }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder=new MediaRecorder(stream); chunks=[];
+    mediaRecorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop=()=>{
+      const blob=new Blob(chunks,{type: mediaRecorder.mimeType||"audio/mp4"});
+      const rr=new FileReader(); rr.onload=()=>{ currentVoice=rr.result; showVoice(); };
+      rr.readAsDataURL(blob);
+      stream.getTracks().forEach(t=>t.stop());
+      btn.innerHTML="🎙 Re-record"; st.innerHTML="";
+    };
+    mediaRecorder.start();
+    btn.innerHTML="⏹ Stop";
+    st.innerHTML='<span class="rec-dot"></span> recording…';
+  }catch(e){ toast("Microphone not available"); }
+}
+function showVoice(){
+  const p=document.getElementById("voicePlayer"), btn=document.getElementById("recBtn");
+  if(currentVoice){ p.src=currentVoice; p.style.display="block"; btn.innerHTML="🎙 Re-record"; }
+  else { p.style.display="none"; p.removeAttribute("src"); btn.innerHTML="🎙 Record a voice memory"; }
+}
+
+/* ---------- AI estimate (optional) ---------- */
+async function aiEstimate(){
+  const key=localStorage.getItem("heirloom_key");
+  if(!key){ openSettings(); toast("Add your Claude API key to use AI Guess"); return; }
+  if(!currentPhoto){ toast("Take a photo of the item first"); return; }
+  const model=localStorage.getItem("heirloom_model")||"claude-3-5-sonnet-latest";
+  const btn=document.getElementById("aiBtn"); const old=btn.innerHTML; btn.innerHTML="✨ …"; btn.disabled=true;
+  try{
+    const m=currentPhoto.match(/^data:(.*?);base64,(.*)$/);
+    const media=m?m[1]:"image/jpeg", b64=m?m[2]:currentPhoto;
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:400,messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64","media_type":media,data:b64}},
+        {type:"text",text:'You are appraising a household item for an estate inventory. Respond with ONLY compact JSON, no prose: {"name":"short item name","category":"one of: '+CATS.join(", ")+'","value": estimated_resale_value_USD_number}. Value should be a realistic used/resale price in US dollars.'}
+      ]}]})
+    });
+    if(!resp.ok){ const t=await resp.text(); throw new Error(resp.status+" "+t.slice(0,140)); }
+    const data=await resp.json();
+    let txt=(data.content&&data.content[0]&&data.content[0].text||"").trim().replace(/^```json/i,"").replace(/^```/,"").replace(/```$/,"").trim();
+    const j=JSON.parse(txt);
+    if(j.name) document.getElementById("fName").value=j.name;
+    if(j.category && CATS.includes(j.category)) document.getElementById("fCat").value=j.category;
+    if(j.value!=null && document.getElementById("fValue").value==="") document.getElementById("fValue").value=Math.round(j.value);
+    updateComps();
+    toast("AI filled a first guess — check the eBay comps for the real number");
+  }catch(e){ toast("AI Guess failed: "+e.message); }
+  finally{ btn.innerHTML=old; btn.disabled=false; }
+}
+
+/* ---------- Save / delete ---------- */
+function saveItem(){
+  const name=document.getElementById("fName").value.trim();
+  if(!name && !currentPhoto){ toast("Add a photo or a name first"); return; }
+  const rec={
+    id: editingId||uid(),
+    name, category:document.getElementById("fCat").value,
+    room:document.getElementById("fRoom").value.trim(),
+    estValue:Number(document.getElementById("fValue").value)||0,
+    confirmedValue:Number(document.getElementById("fValue").value)||0,
+    status:document.getElementById("fStatus").value,
+    memory:document.getElementById("fMemory").value,
+    photo:currentPhoto||null, voice:currentVoice||null,
+    dateAdded: editingId ? (items.find(x=>x.id===editingId)||{}).dateAdded || new Date().toISOString() : new Date().toISOString()
+  };
+  if(editingId){ items=items.map(x=>x.id===editingId?rec:x); }
+  else { items.push(rec); }
+  persist(); render(); closeForm(); toast(editingId?"Updated":"Item added");
+}
+function deleteCurrent(){
+  if(!editingId) return;
+  items=items.filter(x=>x.id!==editingId); persist(); render(); closeForm(); toast("Deleted");
+}
+function wipeAll(){ if(confirm("Erase every item on this device? This can't be undone.")){ items=[]; persist(); render(); closeSettings(); } }
+
+/* ---------- Settings ---------- */
+function openSettings(){
+  document.getElementById("apiKey").value=localStorage.getItem("heirloom_key")||"";
+  document.getElementById("apiModel").value=localStorage.getItem("heirloom_model")||"claude-3-5-sonnet-latest";
+  showView("settings");
+}
+function closeSettings(){ showView("dash"); }
+async function saveSettings(){
+  localStorage.setItem("heirloom_key",document.getElementById("apiKey").value.trim());
+  localStorage.setItem("heirloom_model",document.getElementById("apiModel").value.trim()||"claude-3-5-sonnet-latest");
+  const pin=document.getElementById("pinInput").value.trim();
+  if(pin){
+    if(!/^\d{4,8}$/.test(pin)){ toast("Passcode must be 4–8 digits"); return; }
+    localStorage.setItem("heirloom_pin", await sha(pin));
+    localStorage.setItem("heirloom_pin_len", String(pin.length));
+  }
+  refreshPinUI(); closeSettings(); toast("Saved");
+}
+
+/* ---------- CSV ---------- */
+function exportCSV(){
+  if(!items.length){ toast("Nothing to export yet"); return; }
+  const cols=["Name","Category","Room","Estimated Value","Status","Memory","eBay Sold Comps","Date Added"];
+  const esc=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';
+  const rows=items.map(it=>[
+    it.name,it.category,it.room,valueOf(it),it.status,it.memory,
+    "https://www.ebay.com/sch/i.html?_nkw="+encodeURIComponent(it.name||"")+"&LH_Sold=1&LH_Complete=1",
+    (it.dateAdded||"").slice(0,10)
+  ].map(esc).join(","));
+  const csv=cols.map(esc).join(",")+"\n"+rows.join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="heirloom-inventory.csv"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  toast("CSV exported");
+}
+
+/* ---------- Security: passcode lock ---------- */
+let pinBuf="";
+async function sha(s){
+  if(window.crypto&&crypto.subtle){
+    const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("heirloom::"+s));
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+  }
+  return "plain::"+s; // fallback if subtle crypto unavailable (non-HTTPS legacy)
+}
+function buildKeypad(){
+  const k=document.getElementById("lockKeys");
+  const keys=["1","2","3","4","5","6","7","8","9","","0","⌫"];
+  k.innerHTML=keys.map(n=> n==="" ? `<button class="blank"></button>` :
+     `<button onclick="pinPress('${n}')">${n}</button>`).join("");
+}
+function expLen(){ return Number(localStorage.getItem("heirloom_pin_len"))||4; }
+function drawDots(){
+  const d=document.getElementById("lockDots"); const L=expLen();
+  d.innerHTML=Array.from({length:L},(_,i)=>`<div class="dot ${i<pinBuf.length?"on":""}"></div>`).join("");
+}
+async function pinPress(n){
+  const err=document.getElementById("lockErr"); err.textContent="";
+  if(n==="⌫"){ pinBuf=pinBuf.slice(0,-1); drawDots(); return; }
+  const L=expLen();
+  if(pinBuf.length>=L) return;
+  pinBuf+=n; drawDots();
+  if(pinBuf.length===L){
+    const stored=localStorage.getItem("heirloom_pin");
+    if((await sha(pinBuf))===stored){ unlock(); }
+    else { err.textContent="Wrong passcode"; pinBuf=""; setTimeout(drawDots,350); }
+  }
+}
+function unlock(){ pinBuf=""; document.getElementById("lock").classList.remove("show"); }
+function lockNow(){ if(localStorage.getItem("heirloom_pin")){ pinBuf=""; drawDots(); document.getElementById("lockErr").textContent=""; document.getElementById("lock").classList.add("show"); closeSettings(); } else { toast("Set a passcode first"); } }
+async function removePin(){ localStorage.removeItem("heirloom_pin"); localStorage.removeItem("heirloom_pin_len"); refreshPinUI(); toast("Passcode removed"); }
+function refreshPinUI(){
+  const has=!!localStorage.getItem("heirloom_pin");
+  document.getElementById("lockNowBtn").style.display=has?"flex":"none";
+  document.getElementById("removePinBtn").style.display=has?"flex":"none";
+  document.getElementById("pinInput").value="";
+  document.getElementById("pinInput").placeholder=has?"Change passcode (4–8 digits)":"Set a 4–8 digit passcode";
+}
+
+/* ---------- Toast ---------- */
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ---------- Init ---------- */
+buildKeypad();
+if(localStorage.getItem("heirloom_pin")){ drawDots(); document.getElementById("lock").classList.add("show"); }
+refreshPinUI();
+render();
+showView("dash");
+
+/* ---------- Diagnostics: prove the code ran + wire the button defensively ---------- */
+(function(){
+  var diag=document.getElementById("diag");
+  function setDiag(msg,ok){ if(diag){ diag.textContent=msg; diag.style.color= ok?"#3a5a40":"#a1443a"; } }
+  setDiag("Heirloom v7 · engine OK ✓ — tap Add Item", true);
+  var ab=document.getElementById("addBtn");
+  if(ab){
+    ab.addEventListener("click",function(){
+      setDiag("Heirloom v7 · tap received → opening…", true);
+      try{ openForm(); setDiag("Heirloom v7 · form open ✓", true); }
+      catch(err){ setDiag("Heirloom v7 · openForm ERROR: "+err.message, false);
+        var b=document.getElementById("errbar"); if(b){b.style.display="block"; b.textContent="⚠ openForm: "+err.message;} }
+    });
+  } else {
+    setDiag("Heirloom v7 · engine OK but Add button not found", false);
+  }
+})();
+</script>
+</body>
+</html>
